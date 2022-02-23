@@ -13,6 +13,15 @@ struct ContentView: View {
     @State var currentJoke: DadJoke = DadJoke(id: "", joke: "knock, knock...", status: 0)
     
     
+    // This will keep track of our list of current jokes.
+    
+    @State var favorites: [DadJoke] = [] //empty list to start.
+    
+    // This will let us know whether the currentJoke exists as a favor.
+    
+    @State var currentJokeAddedToFavorites: Bool = false
+    
+    
     //MARK: Computed Properties
     
     
@@ -32,7 +41,18 @@ struct ContentView: View {
             Image(systemName: "heart.circle")
                 .resizable()
                 .frame(width: 30, height: 30)
-                .foregroundColor(.gray)
+                .onTapGesture {
+                    
+                    // Only add to favorites list if it isnt already there.
+                    if currentJokeAddedToFavorites == false {
+                        //Adds the currentJoke to the list of favorites
+                        favorites.append(currentJoke)
+                        //Record that we have marked this a favorite
+                        currentJokeAddedToFavorites = true
+                    }
+                    
+                }
+                .foregroundColor(currentJokeAddedToFavorites == true ? .red : .secondary)
             
             Button(action: {
                 // This task type allows us to load asynchronous code within a button and add the user interface updated when the data is ready.
@@ -56,18 +76,18 @@ struct ContentView: View {
                 
                 Spacer()
             }
-            
-            List {
-                Text("Which side of the chicken has more feathers? The outside.")
-                Text("Why did the Clydesdale give the pony a glass of water? Because he was a little horse!")
-                Text("The great thing about stationery shops is they're always in the same place...")
+            //iterate over the list of favorites.
+            List(favorites, id: \.self) { currentFavorite in
+                Text(currentFavorite.joke)
             }
             
             Spacer()
             
         }
         // When the app opens, get a new joke from the web service
-        
+        .task {
+            await loadNewJoke()
+        }
         .navigationTitle("icanhazdadjoke?")
         .padding()
     }
@@ -103,6 +123,8 @@ struct ContentView: View {
             //                                         |
             //                                         V
             currentJoke = try JSONDecoder().decode(DadJoke.self, from: data)
+            // Reset the flag that tracks whether the current joke is a favorite.
+            currentJokeAddedToFavorites = false
             
         } catch {
             print("Could not retrieve or decode the JSON from endpoint.")
